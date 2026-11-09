@@ -68,11 +68,15 @@ Then, I created a table showing the number of samples, mean and standard deviati
 
 To visualize better, I plotted a histogram to check the distribution of age from the two different groups.
 
+![Age distribution by status](./figures/age_distribution_by_status.png)
+
 ### Using statistics tests to analyze the differences
 
 Running a **Mann-Whitney test** for age and a **chi-square contingency test** for sex showed a very low p-value in both cases, showing a statistically significant difference between groups. I chose the Mann-Whitney because the distribution of age is not normal (as seen on the histogram) and because an extreme value could impact the p-value. This is related to the 17-year age difference and to having 35 more percentage points of women.
 
 These differences can lead to a false conclusion because the results could actually be due to Alzheimer's disease patients being older than non-demented controls and having a higher proportion of women. 
+
+Age and gender change gene expression in the brain, so a model could learn "female vs. male" or "older vs. younger" and appear to have learned "Alzheimer's vs. non-demented". We can see that XIST expression is about 100 times higher in females.
 
 ### Testing removing age range
 
@@ -90,3 +94,65 @@ Since the difference is not big, and the real problem is in the middle of the da
 ### Limitation
 
 Post-mortem interval (PMI) was 17.8 ± 8.3 hours, sample pH was 6.4 ± 0.3, and RNA integrity number (RIN) was 6.8 ± 0.8 for the average sample in the overall cohort. Since these data are from the whole study, we cannot conclude anything about each sample. This is a limitation because it's not possible to test or control.
+
+## Phase 3
+
+Each value in the `data.csv` file represents the log10 ratio between a person and a reference. Values go from -2 to 2.
+
+### Missing values
+
+I opened both `metadata_ad_control.csv` and `data.csv` files so I could filter only samples with AD or non-demented. Then, I checked that there were 701 missing values. The maximum missing values per probe is 9, which represents 1.9% of all samples. The maximum missing values per sample is 80, representing 0.2% of all probes. Since these numbers are too small, they don't exceed the threshold, so for now, nothing is dropped.
+
+### Distribution of median and standard deviation
+
+I've created another dataframe with the median and standard deviation for each sample and plotted it using a scatter plot.
+
+![Distribution per sample](./figures/distribution_per_sample.png)
+
+There was a specific point, a possible outlier, far from every point, so I decided to understand its group and gender.
+
+|age_ch2|gender_ch2|disease_status_ch2 |geo_accession|
+|-------|----------|-------------------|-------------|
+|93     |female    |Alzheimer's disease|GSM1423944   |
+
+After comparing the highest and second highest standard deviation, the outlier is much higher than the second one (0.36 versus 0.25). Also, it's 2.7 times higher than the average, which can indicate a technical issue. **The sample was removed.**
+
+### Min and max
+
+I found that there is a limited range for the data, going from -2 to 2. 0.02776% of the whole matrix has this limit as a minimum or maximum. Since it probably means a processing cut, I decided to keep them.
+
+### Annot
+
+#### Filtering
+I opened the `GPL4372.annot` file in the same way I did when I opened the metadata. I transposed the data so probes ID would become indexes. Then, I did the following:
+1. Filtered only IDs that matched the ones from the data dataframe 
+2. Added the standard deviation columns by probe
+3. Removed every probe without a gene symbol or with multiple genes
+4. For duplicates, I kept only the one with the highest standard deviation
+
+At the end I had:
+- Probes with gene: 24134
+- More than one gene: 125
+- Duplicated probes to be removed: 4599
+
+After these filters, I changed the `data` dataframe columns to match the gene.
+
+#### Transposing `data`
+
+Transposing the dataframe was useful so each probe would become a column, matching the `annot` dataframe.
+
+#### Mistakes
+
+While filtering the data, I've tried concatenating the datasets by positiong, which returned the wrong genes. Then, I realized I needed to convert one of the IDs to number so they could be merged by ID.
+
+#### Confirmation
+To confirm the information, I calculated the mean, grouped by gender, of the XIST gene. The results indicate this gene is around 100 times higher in females than males, which confirms the gene names are correctly mapped.
+
+|gender_ch2|XIST_mean |
+|----------|----------|
+|female    |0.295272  |
+|male      |-1.711775 |
+
+### Final data
+
+466 samples by 19410 genes, with annotation for every one of the 39280 probes.
