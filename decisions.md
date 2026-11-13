@@ -143,7 +143,7 @@ Transposing the dataframe was useful so each probe would become a column, matchi
 
 #### Mistakes
 
-While filtering the data, I've tried concatenating the datasets by positiong, which returned the wrong genes. Then, I realized I needed to convert one of the IDs to number so they could be merged by ID.
+While filtering the data, I've tried concatenating the datasets by position, which returned the wrong genes. Then, I realized I needed to convert one of the IDs to number so they could be merged by ID.
 
 #### Confirmation
 To confirm the information, I calculated the mean, grouped by gender, of the XIST gene. The results indicate this gene is around 100 times higher in females than males, which confirms the gene names are correctly mapped.
@@ -155,4 +155,28 @@ To confirm the information, I calculated the mean, grouped by gender, of the XIS
 
 ### Final data
 
-466 samples by 19410 genes, with annotation for every one of the 39280 probes.
+466 samples by 19410 genes, with annotation for every one of them.
+
+## Phase 4
+
+This phase was mainly exploratory. At first, I used the data with symbols and replaced all `NaN` values with the median to do the exploration. I won't use this approach in the model because we need to split the data into train and test sets, and this could cause data leakage, which can bias the results. Then, I standardized the data using `StandardScaler` and applied `PCA` with 5 components.
+
+### PCA
+
+PCA is used to summarize the information in fewer dimensions. The variance ratio was 26% and 13% in the first and second components. This is how much of the spread components 1 and 2 get. Since PCA uses variance, I standardized the data beforehand, setting the mean to 0 and the standard deviation to 1, giving every gene the same weight.
+
+Then, I opened the metadata dataframe to understand each row of the data. I analyzed the first two components by diagnosis, gender, and age.
+
+![PCA](./figures/pca_per_diagnosis_gender_age.png)
+
+`PCA by age` shows people younger than 60 are concentrated to the right of the graph, which coincides with non-demented people on `PCA by diagnosis`. 
+
+Later, I converted categorical data (`disease_status_ch2` and `gender_ch2`) into numerical data, and calculated the correlation between PCA components and the other labels.
+
+![PCA correlation](./figures/pca_correlation.png)
+
+`PCA1` separates the disease status and age at the same time. The correlation with disease status is 0.61, and with age is 0.51. In this case, we cannot know if it's Alzheimer's or aging.
+
+Because of this relationship, the model could easily infer the answer from the genes, since they carry aging signals. This happens because the non-demented controls are 17 years younger than patients with Alzheimer's. In a dataset where all controls and patients with AD are the same age, the model would perform much worse, since the age shortcut would no longer work.
+
+Sex correlates less (0.36) with PCA1 than status and age. Also, PCA2 to PCA5 show a low correlation with status, age and gender. 
