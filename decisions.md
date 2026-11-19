@@ -180,3 +180,33 @@ Later, I converted categorical data (`disease_status_ch2` and `gender_ch2`) into
 Because of this relationship, the model could easily infer the answer from the genes, since they carry aging signals. This happens because the non-demented controls are 17 years younger than patients with Alzheimer's. In a dataset where all controls and patients with AD are the same age, the model would perform much worse, since the age shortcut would no longer work.
 
 Sex correlates less (0.36) with PCA1 than status and age. Also, PCA2 to PCA5 show a low correlation with status, age and gender. 
+
+## Phase 5
+
+In this phase, I split the data into train and test sets and defined baselines. First, I loaded the data, removed the outlier, and merged the data and metadata. Then, I converted status and gender into numbers (AD = 1, non-demented = 0; female = 1, male = 0).
+
+I split the data into X and y, and used `train_test_split` to split into 20% test and 80% train. I used `stratify` to separate equally based on the status, so both train and test have the same proportion of AD and non-demented.
+
+|         |`y_train`|`y_test`|
+|---------|---------|--------|
+|1        |0.663978 |0.659574|
+|0        |0.336022 |0.340426|
+
+I chose `roc_auc_score` and `balanced_accuracy_score` to score my models. **AUC** measures the probability of an AD patient receiving a higher score than a non-demented control. **Balanced accuracy** measures the mean of the correct answers in AD and in non-demented. At first, I ran `DummyClassifier`, in which I had 50% in both AUC and balanced accuracy.
+
+Then, I created a pipeline with a `StandardScaler` and a `LogisticRegressionCV` to run three sets of features: only gender, only age, and age and gender together.
+
+The results were: age alone predicted the diagnosis with `AUC = 0.887`. I printed the `.C_` of the Logistic Regression model, which is the strength of regularization. In both models with only one variable, the chosen C was 0.0001, which indicates strong regularization. The model chose this number because all C values give the same AUC, so it takes the first of the list. With two variables, the AUC changes based on the C.
+
+Before, age alone had a balanced accuracy of 50% because everyone was predicted as Alzheimer's disease. Then, I used `class_weight='balanced'` inside the model, which improved the scores for balanced accuracy and kept the `.C_` as 0.0001. The AUC didn't change because the order of age (higher rate for older people) is still the same. This argument gave the same weight for both classes. Using both variables, now I have C = 0.359.
+
+|                 |dummy |age  |gender|age and gender|
+|-----------------|------|-----|------|--------------|
+|AUC              |50.0% |88.7%|63.4% |87.9%         |
+|Balanced accuracy|50.0% |77.0%|63.4% |77.0%         |
+|sensitivity      |100.0%|79.0%|54.8% |79.0%         |
+|specificity      |0.0%  |75.0%|71.9% |75.0%         |
+
+The expected is to have a score higher than 0.887 when running with genes. This would be the first signal.
+
+I saved two new `.csv` files: train and test dataframes with the corresponding IDs and targets, so in the next phases I can use the same train and test I used for the baseline.
